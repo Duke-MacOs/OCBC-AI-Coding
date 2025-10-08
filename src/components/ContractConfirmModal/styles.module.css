@@ -1,0 +1,55 @@
+/* 主容器样式 */
+.modalContainer {
+  padding: 24px;
+}
+
+/* 合同信息部分样式 */
+.contractInfo {
+  width: 80%;
+  margin: 0 auto;
+  border: 1px solid black;
+  border-radius: 6px;
+  padding: 16px;
+  background-color: #fafafa;
+  text-align: center;
+}
+
+/* 预付时间表部分样式 */
+.prepaymentTable {
+  width: 80%;
+  margin: 20px auto 0;
+  border: 1px solid black;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* 合同名称样式 */
+.contractName {
+  font-size: 16px;
+  font-weight: 500;
+  color: #262626;
+}
+
+/* 表格工具栏样式 */
+.tableToolbar {
+  padding: 16px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 新增按钮样式 */
+.addButton {
+  margin-bottom: 16px;
+}
+
+/* 删除按钮样式 */
+.deleteButton {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.deleteButton:hover {
+  color: #fff;
+  background-color: #ff4d4f;
+  border-color: #ff4d4f;
+}
