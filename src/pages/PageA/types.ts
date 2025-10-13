@@ -8,20 +8,14 @@ export interface UploadFile {
   type?: string;
 }
 
-// 合同数据类型
-export interface ContractData {
-  id: string;
-  contractName: string;
-  createTime: string;
-  status: 'active' | 'inactive';
-  fileUrl?: string;
-  description?: string;
-}
+// 合同数据类型 - 使用 API 定义的类型
+import { Contract } from '../../api/contracts';
+export type ContractData = Contract;
 
 // 页面状态类型
 export interface PageAState {
   uploadedFiles: UploadFile[];
-  contractList: ContractData[];
+  contractList: Contract[];
   loading: boolean;
   error: string | null;
 }
