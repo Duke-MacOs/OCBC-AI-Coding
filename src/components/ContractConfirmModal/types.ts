@@ -1,21 +1,17 @@
-// 预付时间表数据项
-export interface PrepaymentItem {
-  id: string;
-  prepaymentDate: string;
-  accountingDate: string;
-  amount: number;
-}
+import { ContractUploadResponse, AmortizationEntry } from '../../api/contracts';
 
-// 合同信息
-export interface ContractInfo {
-  id: string;
-  name: string;
-}
+// 预付时间表数据项 - 使用 AmortizationEntry 类型
+export type PrepaymentItem = AmortizationEntry & {
+  id: string | number | null;
+};
+
+// 合同信息 - 使用 ContractUploadResponse 类型
+export type ContractInfo = ContractUploadResponse;
 
 // 组件 Props
 export interface ContractConfirmModalProps {
   visible: boolean;
-  contractInfo: ContractInfo;
+  contractInfo: ContractInfo | null;
   prepaymentData: PrepaymentItem[];
   onConfirm: (data: PrepaymentItem[]) => void;
   onCancel: () => void;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal, Button, message } from 'antd';
 import { EditableProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
@@ -13,23 +13,17 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  // 工具：通用格式化（不依赖第三方库）。
-  // 若值为字符串直接返回；若是具有 format 方法的对象（例如日期类库实例），尝试调用其 format('YYYY-MM-DD')，否则返回空串。
-  const formatDateValue = useCallback((v: any): string => {
-    if (!v) return '';
-    if (typeof v === 'string') return v;
-    if (typeof v === 'object' && typeof (v as any).format === 'function') {
-      try {
-        return (v as any).format('YYYY-MM-DD');
-      } catch {
-        return '';
-      }
-    }
-    return '';
-  }, []);
   // 表格数据状态管理
   const [dataSource, setDataSource] = useState<PrepaymentItem[]>(prepaymentData);
-  const [editableKeys, setEditableRowKeys] = useState<React.Key[]>(prepaymentData.map(i => i.id));
+  const [editableKeys, setEditableRowKeys] = useState<React.Key[]>(
+    prepaymentData.map(i => String(i.id ?? ''))
+  );
+
+  // 监听 prepaymentData 变化，同步更新内部状态
+  useEffect(() => {
+    setDataSource(prepaymentData);
+    setEditableRowKeys(prepaymentData.map(i => String(i.id ?? '')));
+  }, [prepaymentData]);
 
   // 生成新的ID
   const generateId = useCallback(() => {
@@ -47,52 +41,36 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
 
   // 已移除批量选择与批量删除功能
 
-  // 表格列配置（前4步的基础功能 + 第五步的删除操作列）
+  // 表格列配置（摊销明细）
   const columns: ProColumns<PrepaymentItem>[] = useMemo(() => [
     {
-      title: '预提时间',
-      dataIndex: 'prepaymentDate',
-      key: 'prepaymentDate',
+      title: '预提/摊销期间',
+      dataIndex: 'amortizationPeriod',
+      key: 'amortizationPeriod',
       valueType: 'text',
       width: 150,
       formItemProps: {
         rules: [
-          { required: true, message: '请选择预提时间' },
+          { required: true, message: '请输入预提/摊销期间' },
         ],
       },
-      render: (_: any, record: PrepaymentItem) => (record.prepaymentDate || ''),
-      renderFormItem: (_: any, { value, onChange }: any) => (
-        <input
-          type="date"
-          style={{ width: '100%', height: 32, padding: '4px 8px', boxSizing: 'border-box' }}
-          value={typeof value === 'string' ? value : ''}
-          onChange={(e) => onChange?.(e.target.value || '')}
-        />
-      ),
+      render: (_: any, record: PrepaymentItem) => (record.amortizationPeriod || ''),
     },
     {
-      title: '入账时间',
-      dataIndex: 'accountingDate',
-      key: 'accountingDate',
+      title: '入账期间',
+      dataIndex: 'accountingPeriod',
+      key: 'accountingPeriod',
       valueType: 'text',
       width: 150,
       formItemProps: {
         rules: [
-          { required: true, message: '请选择入账时间' },
+          { required: true, message: '请输入入账期间' },
         ],
       },
-      render: (_: any, record: PrepaymentItem) => (record.accountingDate || ''),
-      renderFormItem: (_: any, { value, onChange }: any) => (
-        <input
-          type="date"
-          style={{ width: '100%', height: 32, padding: '4px 8px', boxSizing: 'border-box' }}
-          value={typeof value === 'string' ? value : ''}
-          onChange={(e) => onChange?.(e.target.value || '')}
-        />
-      ),
+      render: (_: any, record: PrepaymentItem) => (record.accountingPeriod || ''),
     },
     {
-      title: '金额',
+      title: '摊销金额',
       dataIndex: 'amount',
       key: 'amount',
       valueType: 'money',
@@ -108,6 +86,7 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
         min: 0,
         placeholder: '请输入金额',
       },
+      render: (_: any, record: PrepaymentItem) => `¥${record.amount.toFixed(2)}`,
     },
     {
       title: '操作',
@@ -154,27 +133,22 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
   // 确认按钮处理
   const handleConfirm = useCallback(() => {
     // 验证所有行数据是否完整
-    const normalized = dataSource.map((row: any) => ({
-      ...row,
-      prepaymentDate: formatDateValue(row.prepaymentDate),
-      accountingDate: formatDateValue(row.accountingDate),
-    }));
-    const invalidRows = normalized.filter(item => 
-      !item.prepaymentDate || !item.accountingDate || !item.amount || item.amount <= 0
+    const invalidRows = dataSource.filter(item => 
+      !item.amortizationPeriod || !item.accountingPeriod || !item.amount || item.amount <= 0
     );
 
     if (invalidRows.length > 0) {
       message.error('请完善所有行的数据信息');
       return;
     }
-    onConfirm(normalized as PrepaymentItem[]);
-  }, [dataSource, onConfirm, formatDateValue]);
+    onConfirm(dataSource);
+  }, [dataSource, onConfirm]);
 
   // 取消按钮处理
   const handleCancel = useCallback(() => {
     // 重置数据到初始状态
     setDataSource(prepaymentData);
-    setEditableRowKeys(prepaymentData.map(i => i.id));
+    setEditableRowKeys(prepaymentData.map(i => String(i.id ?? '')));
     onCancel();
   }, [prepaymentData, onCancel]);
 
@@ -215,30 +189,50 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
       ]}
     >
       <div className={styles.modalContainer}>
-        {/* 第二步：合同信息部分 */}
-        <div className={styles.contractInfo}>
-          <div className={styles.contractName}>
-            合同名称：{contractInfo.name}
+        {/* 合同信息部分 */}
+        {contractInfo && (
+          <div className={styles.contractInfo}>
+            <div className={styles.infoRow}>
+              <span className={styles.label}>合同附件名称：</span>
+              <span className={styles.value}>{contractInfo.attachmentName}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.label}>供应商名称：</span>
+              <span className={styles.value}>{contractInfo.vendorName}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.label}>合同总金额：</span>
+              <span className={styles.value}>¥{contractInfo.totalAmount.toFixed(2)}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.label}>合同期限：</span>
+              <span className={styles.value}>{contractInfo.startDate} 至 {contractInfo.endDate}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.label}>税率：</span>
+              <span className={styles.value}>{(contractInfo.taxRate * 100).toFixed(2)}%</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* 第三步、第四步、第五步：预付时间表部分 */}
+        {/* 摊销明细表部分 */}
         <div className={styles.prepaymentTable}>
           <EditableProTable<PrepaymentItem>
             rowKey="id"
-            headerTitle="预付时间表"
+            headerTitle="摊销明细表"
             columns={columns}
             value={dataSource}
             onChange={handleDataSourceChange}
-            // 使用内置新增入口，显示在表格底部，符合官方文档样式
+            // 使用内置新增入口，显示在表格底部
             recordCreatorProps={{
               position: 'bottom',
               record: () => ({
-                id: generateId(),
-                prepaymentDate: '',
-                accountingDate: '',
+                id: generateId() as any,
+                amortizationPeriod: '',
+                accountingPeriod: '',
                 amount: 0,
-              }),
+                status: 'PENDING',
+              } as PrepaymentItem),
             }}
             editable={{
               type: 'multiple',

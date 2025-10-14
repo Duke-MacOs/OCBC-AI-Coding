@@ -20,7 +20,7 @@ import type { UploadProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { PageAProps, ContractData } from './types';
-import { getAllContracts } from '../../api';
+import { getAllContracts, uploadContract, calculateAmortization } from '../../api';
 import styles from './styles.module.css';
 import ContractConfirmModal from '../../components/ContractConfirmModal';
 import type { ContractInfo, PrepaymentItem } from '../../components/ContractConfirmModal/types';
@@ -53,43 +53,51 @@ const PageA: React.FC<PageAProps> = () => {
     fetchContracts();
   }, []);
   
-  // 合同确认弹窗：默认打开以便检查样式
+  // 合同确认弹窗状态
   const [confirmVisible, setConfirmVisible] = useState<boolean>(false);
-  const contractInfo: ContractInfo = {
-    id: 'demo-1',
-    name: '演示合同-样式检查',
-  };
-  const [prepaymentData, setPrepaymentData] = useState<PrepaymentItem[]>([
-    {
-      id: 'prepayment_1',
-      prepaymentDate: '2024-01-01',
-      accountingDate: '2024-01-31',
-      amount: 1000,
-    },
-    {
-      id: 'prepayment_2',
-      prepaymentDate: '2024-02-01',
-      accountingDate: '2024-02-28',
-      amount: 2000,
-    },
-  ]);
+  const [contractInfo, setContractInfo] = useState<ContractInfo | null>(null);
+  const [prepaymentData, setPrepaymentData] = useState<PrepaymentItem[]>([]);
+
+  // 处理文件上传
+  const handleFileUpload = useCallback(async (file: File) => {
+    setLoading(true);
+    try {
+      // 步骤2：调用上传合同文件接口
+      message.loading({ content: '正在上传合同文件...', key: 'upload' });
+      const uploadResponse = await uploadContract(file);
+      message.success({ content: uploadResponse.message || '合同上传成功', key: 'upload' });
+
+      // 设置合同信息
+      setContractInfo(uploadResponse);
+
+      // 步骤3：根据 contractId 调用计算合同摊销明细接口
+      message.loading({ content: '正在计算摊销明细...', key: 'calculate' });
+      const amortizationResponse = await calculateAmortization(uploadResponse.contractId);
+      message.success({ content: '摊销明细计算完成', key: 'calculate' });
+
+      // 步骤4：将摊销明细设置到弹窗中
+      const formattedEntries = amortizationResponse.entries.map((entry, index) => ({
+        ...entry,
+        id: entry.id ?? index,
+      })) as PrepaymentItem[];
+      setPrepaymentData(formattedEntries);
+
+      // 打开合同确认弹窗
+      setConfirmVisible(true);
+
+      // 刷新合同列表
+      const listResponse = await getAllContracts();
+      setContractList(listResponse.contracts);
+    } catch (error) {
+      console.error('上传失败:', error);
+      message.error('合同上传失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // 处理文件上传变化
   function handleUploadChange(info: any) {
-    const { status } = info.file;
-    
-    if (status !== 'uploading') {
-      console.log(info.file, info.fileList);
-    }
-    
-    if (status === 'done') {
-      message.success(`${info.file.name} 文件上传成功`);
-      // 文件上传成功后，重新加载合同列表
-      // TODO: 实际应该调用后端上传接口，然后刷新列表
-    } else if (status === 'error') {
-      message.error(`${info.file.name} 文件上传失败`);
-    }
-    
     setUploadedFiles(info.fileList);
   }
 
@@ -209,28 +217,40 @@ const PageA: React.FC<PageAProps> = () => {
     setPrepaymentData(data);
     message.success('合同确认已提交');
     setConfirmVisible(false);
+    // 清空弹窗数据
+    setContractInfo(null);
+    setPrepaymentData([]);
+    setUploadedFiles([]);
   }, []);
 
   const handleConfirmModalCancel = useCallback(() => {
     setConfirmVisible(false);
+    // 清空弹窗数据
+    setContractInfo(null);
+    setPrepaymentData([]);
+    setUploadedFiles([]);
   }, []);
 
-    // 文件上传配置
-    const uploadProps: UploadProps = {
-        name: 'file',
-        multiple: true,
-        action: '/api/upload', // 这里应该是实际的上传接口
-        accept: '.pdf,.doc,.docx,.txt,.xlsx,.xls',
-        maxCount: 10,
-        onChange: handleUploadChange,
-        onDrop: handleDrop,
-        fileList: uploadedFiles,
-        showUploadList: {
-          showDownloadIcon: true,
-          showRemoveIcon: true,
-          showPreviewIcon: true,
-        },
-      };
+  // 文件上传配置
+  const uploadProps: UploadProps = {
+    name: 'file',
+    multiple: false,
+    accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+    maxCount: 1,
+    beforeUpload: (file) => {
+      // 拦截上传，手动调用接口
+      handleFileUpload(file);
+      return false; // 阻止默认上传行为
+    },
+    onChange: handleUploadChange,
+    onDrop: handleDrop,
+    fileList: uploadedFiles,
+    showUploadList: {
+      showDownloadIcon: false,
+      showRemoveIcon: true,
+      showPreviewIcon: false,
+    },
+  };
 
   return (
     <div className={styles.pageContainer}>
