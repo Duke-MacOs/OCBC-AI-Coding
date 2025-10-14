@@ -1,9 +1,9 @@
 import { ContractUploadResponse, AmortizationEntry } from '../../api/contracts';
 
-// 预付时间表数据项 - 使用 AmortizationEntry 类型
-export type PrepaymentItem = AmortizationEntry & {
-  id: string | number | null;
-};
+// 预付时间表数据项 - 扩展 AmortizationEntry 类型以支持临时字符串ID
+export interface PrepaymentItem extends Omit<AmortizationEntry, 'id'> {
+  id: string | number; // 移除 null，确保 id 总是有值
+}
 
 // 合同信息 - 使用 ContractUploadResponse 类型
 export type ContractInfo = ContractUploadResponse;
