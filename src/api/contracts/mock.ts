@@ -6,6 +6,11 @@ import {
   AmortizationScenario,
   AmortizationStatus,
   AmortizationEntry,
+  ContractAmortizationResponse,
+  PaymentStatus,
+  PaymentExecuteRequest,
+  PaymentExecuteResponse,
+  ContractPaymentRecordsResponse,
   UpdateContractRequest,
   UpdateContractResponse
 } from './types';
@@ -156,6 +161,266 @@ export const getMockAmortizationCalculate = (contractId: number): AmortizationCa
 };
 
 /**
+ * 生成合同摊销明细列表 Mock 数据
+ * @param contractId 合同ID
+ */
+export const getMockContractAmortizationEntries = (contractId: number): ContractAmortizationResponse => {
+  // 根据 contractId 返回不同的 mock 数据
+  if (contractId === 1) {
+    return {
+      contract: {
+        id: 1,
+        totalAmount: 4000.00,
+        startDate: "2025-01-01",
+        endDate: "2025-04-30",
+        vendorName: "供应商A"
+      },
+      amortization: [
+        {
+          id: 1,
+          amortizationPeriod: "2025-01",
+          accountingPeriod: "2025-01",
+          amount: 1000.00,
+          periodDate: "2025-01-01",
+          paymentStatus: PaymentStatus.PENDING,
+          createdAt: "2024-12-24T14:30:52.123456",
+          updatedAt: "2024-12-24T14:30:52.123456",
+          createdBy: "system",
+          updatedBy: "system"
+        },
+        {
+          id: 2,
+          amortizationPeriod: "2025-02",
+          accountingPeriod: "2025-02",
+          amount: 1000.00,
+          periodDate: "2025-02-01",
+          paymentStatus: PaymentStatus.PENDING,
+          createdAt: "2024-12-24T14:30:52.123456",
+          updatedAt: "2024-12-24T14:30:52.123456",
+          createdBy: "system",
+          updatedBy: "system"
+        },
+        {
+          id: 3,
+          amortizationPeriod: "2025-03",
+          accountingPeriod: "2025-03",
+          amount: 1000.00,
+          periodDate: "2025-03-01",
+          paymentStatus: PaymentStatus.PENDING,
+          createdAt: "2024-12-24T14:30:52.123456",
+          updatedAt: "2024-12-24T14:30:52.123456",
+          createdBy: "system",
+          updatedBy: "system"
+        },
+        {
+          id: 4,
+          amortizationPeriod: "2025-04",
+          accountingPeriod: "2025-04",
+          amount: 1000.00,
+          periodDate: "2025-04-01",
+          paymentStatus: PaymentStatus.PENDING,
+          createdAt: "2024-12-24T14:30:52.123456",
+          updatedAt: "2024-12-24T14:30:52.123456",
+          createdBy: "system",
+          updatedBy: "system"
+        }
+      ]
+    };
+  }
+
+  // 为其他合同ID提供默认数据
+  const contract = mockContractsList.contracts.find(c => c.contractId === contractId);
+  if (contract) {
+    // 根据合同信息动态生成摊销明细
+    const startDate = new Date(contract.startDate);
+    const endDate = new Date(contract.endDate);
+    const monthDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                      (endDate.getMonth() - startDate.getMonth()) + 1;
+    const monthlyAmount = contract.totalAmount / monthDiff;
+    
+    const amortization = [];
+    for (let i = 0; i < monthDiff; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setMonth(startDate.getMonth() + i);
+      const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      const periodDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+      
+      amortization.push({
+        id: i + 1,
+        amortizationPeriod: period,
+        accountingPeriod: period,
+        amount: parseFloat(monthlyAmount.toFixed(2)),
+        periodDate: periodDate,
+        paymentStatus: PaymentStatus.PENDING,
+        createdAt: "2024-12-24T14:30:52.123456",
+        updatedAt: "2024-12-24T14:30:52.123456",
+        createdBy: "system",
+        updatedBy: "system"
+      });
+    }
+
+    return {
+      contract: {
+        id: contract.contractId,
+        totalAmount: contract.totalAmount,
+        startDate: contract.startDate,
+        endDate: contract.endDate,
+        vendorName: contract.vendorName
+      },
+      amortization
+    };
+  }
+
+  // 如果找不到合同，返回空数据
+  return {
+    contract: {
+      id: contractId,
+      totalAmount: 0,
+      startDate: "",
+      endDate: "",
+      vendorName: "未知供应商"
+    },
+    amortization: []
+  };
+};
+
+/**
+ * Mock 支付执行响应
+ * @param request 支付请求参数
+ * @returns 支付执行响应
+ */
+export const getMockPaymentExecuteResponse = (request: PaymentExecuteRequest): PaymentExecuteResponse => {
+  const { contractId, paymentAmount, bookingDate, selectedPeriods } = request;
+  
+  // 生成选中账期的字符串格式
+  const selectedPeriodsStr = selectedPeriods.map(period => {
+    const year = 2024;
+    const month = period.toString().padStart(2, '0');
+    return `${year}-${month}`;
+  });
+
+  // 生成会计分录
+  const journalEntries = selectedPeriods.map(period => {
+    const year = 2024;
+    const month = period.toString().padStart(2, '0');
+    const periodStr = `${year}-${month}`;
+    
+    return [
+      {
+        bookingDate: `${year}-${month}-27`,
+        account: '应付',
+        dr: paymentAmount / selectedPeriods.length,
+        cr: 0.00,
+        memo: `period:${periodStr}`
+      },
+      {
+        bookingDate: `${year}-${month}-27`,
+        account: '预付',
+        dr: 0.00,
+        cr: paymentAmount / selectedPeriods.length,
+        memo: `period:${periodStr}`
+      }
+    ];
+  }).flat();
+
+  return {
+    paymentId: Math.floor(Math.random() * 1000) + 1,
+    contractId,
+    paymentAmount,
+    bookingDate,
+    selectedPeriods: selectedPeriodsStr,
+    status: 'CONFIRMED',
+    journalEntries,
+    message: '付款执行成功'
+  };
+};
+
+/**
+ * Mock 合同支付记录列表响应
+ * @param contractId 合同ID
+ * @returns 合同支付记录列表
+ */
+export const getMockContractPaymentRecords = (contractId: number): ContractPaymentRecordsResponse => {
+  return [
+    {
+      paymentId: 2,
+      contractId: contractId,
+      paymentAmount: 2001.00,
+      bookingDate: "2024-03-25",
+      selectedPeriods: ["2024-01", "2024-02"],
+      status: "CONFIRMED",
+      journalEntries: [
+        {
+          bookingDate: "2024-01-27",
+          account: "应付",
+          dr: 1000.00,
+          cr: 0.00,
+          memo: "period:2024-01"
+        },
+        {
+          bookingDate: "2024-02-27",
+          account: "应付",
+          dr: 1000.00,
+          cr: 0.00,
+          memo: "period:2024-02"
+        },
+        {
+          bookingDate: "2024-03-25",
+          account: "费用",
+          dr: 1.00,
+          cr: 0.00,
+          memo: "over small"
+        },
+        {
+          bookingDate: "2024-03-25",
+          account: "活期存款",
+          dr: 0.00,
+          cr: 2001.00,
+          memo: "payment"
+        }
+      ]
+    },
+    {
+      paymentId: 1,
+      contractId: contractId,
+      paymentAmount: 6000.00,
+      bookingDate: "2024-03-20",
+      selectedPeriods: ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"],
+      status: "CONFIRMED",
+      journalEntries: [
+        {
+          bookingDate: "2024-01-27",
+          account: "应付",
+          dr: 1000.00,
+          cr: 0.00,
+          memo: "period:2024-01"
+        },
+        {
+          bookingDate: "2024-02-27",
+          account: "应付",
+          dr: 1000.00,
+          cr: 0.00,
+          memo: "period:2024-02"
+        },
+        {
+          bookingDate: "2024-03-20",
+          account: "预付",
+          dr: 4000.00,
+          cr: 0.00,
+          memo: "over prepayment"
+        },
+        {
+          bookingDate: "2024-03-20",
+          account: "活期存款",
+          dr: 0.00,
+          cr: 6000.00,
+          memo: "payment"
+        }
+      ]
+    }
+  ];
+};
+/*
  * 生成更新合同 Mock 数据
  * @param contractId 合同ID
  * @param request 更新请求参数

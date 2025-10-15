@@ -1,50 +1,948 @@
-import React from 'react';
-import { Typography, Space, Button, Table } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Typography, Table, Tabs, Spin, message, Button, Modal, InputNumber, Space, Collapse } from 'antd';
+import { getContractAmortizationEntries, ContractAmortizationResponse, ContractAmortizationEntry, executePayment, PaymentExecuteRequest, getContractPaymentRecords, PaymentRecord } from '../../api/contracts';
 
 const { Title, Text } = Typography;
 
 const ContractDetail: React.FC = () => {
-  // 占位：后续从接口或路由参数获取合同信息
-  const contractName = '示例合同名称';
+  const [contractData, setContractData] = useState<ContractAmortizationResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeKey, setActiveKey] = useState('timeline');
+  
+  // 支付弹窗相关状态
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentEditRecord, setCurrentEditRecord] = useState<ContractAmortizationEntry | null>(null);
+  const [newAmount, setNewAmount] = useState<number | null>(null);
+  
+  // 批量编辑弹窗相关状态
+  const [isBatchModalVisible, setIsBatchModalVisible] = useState(false);
+  const [batchNewAmount, setBatchNewAmount] = useState<number | null>(null);
+  
+  // 多选相关状态
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  
+  // 支付加载状态
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  
+  // 预提会计分录数据
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
+  
+  // 是否为初始加载
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // 预提时间表表头（保持 Antd 默认样式）
+  // 占位：后续从路由参数获取真实contractId
+  const contractId = 1;
+
+  // 获取合同摊销明细数据
+  const fetchContractData = async () => {
+    setLoading(true);
+    try {
+      const response = await getContractAmortizationEntries(contractId);
+      setContractData(response);
+    } catch (error) {
+      message.error('获取合同摊销明细失败');
+      console.error('API调用失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 获取预提会计分录数据
+  const fetchPaymentRecords = async () => {
+    setLoading(true);
+    try {
+      const response = await getContractPaymentRecords(contractId);
+      setPaymentRecords(response);
+    } catch (error) {
+      message.error('获取预提会计分录失败');
+      console.error('API调用失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取数据
+  useEffect(() => {
+    fetchContractData();
+    setIsInitialLoad(false); // 初始加载完成
+  }, [contractId]);
+
+  // Tab切换时获取对应数据
+  useEffect(() => {
+    // 跳过初始加载时的Tab切换逻辑
+    if (isInitialLoad) return;
+
+    const handleTabDataLoading = async () => {
+      if (activeKey === 'accrual') {
+        await fetchPaymentRecords();
+      } else if (activeKey === 'timeline') {
+        // 预提支付页面，显示loading状态
+        setLoading(true);
+        // 模拟加载延迟，保持与其他页签一致的体验
+        await new Promise(resolve => setTimeout(resolve, 200));
+        // 如果还没有数据，重新获取
+        if (!contractData) {
+          await fetchContractData();
+        } else {
+          setLoading(false);
+        }
+      } else if (activeKey === 'payment') {
+        // 付款会计分录页面，显示loading状态
+        setLoading(true);
+        // 模拟加载延迟，实际项目中这里应该调用真实的API
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setLoading(false);
+      }
+    };
+
+    // 执行Tab切换加载逻辑
+    handleTabDataLoading();
+  }, [activeKey, isInitialLoad]);
+
+  // 计算摊销周期
+  const calculateAmortizationPeriods = () => {
+    if (!contractData?.contract) return '';
+    const startDate = new Date(contractData.contract.startDate);
+    const endDate = new Date(contractData.contract.endDate);
+    const monthDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                      (endDate.getMonth() - startDate.getMonth()) + 1;
+    return `共 ${monthDiff} 期，按月摊销`;
+  };
+
+  // 打开支付弹窗
+  const handleEditAmount = (record: ContractAmortizationEntry) => {
+    setCurrentEditRecord(record);
+    setNewAmount(record.amount);
+    setIsModalVisible(true);
+  };
+
+  // 确认支付
+  const handleConfirmEdit = async () => {
+    if (!currentEditRecord || newAmount === null) {
+      message.warning('请输入有效金额');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      // 构造支付请求参数
+      const paymentRequest: PaymentExecuteRequest = {
+        contractId,
+        paymentAmount: newAmount,
+        bookingDate: new Date().toISOString().split('T')[0], // 当前日期 YYYY-MM-DD
+        selectedPeriods: [currentEditRecord.id] // 选中的期次
+      };
+
+      // 调用支付接口
+      const response = await executePayment(paymentRequest);
+      
+      // 显示支付结果
+      message.success(response.message || '付款执行成功');
+      
+      // 关闭弹窗并重置状态
+      setIsModalVisible(false);
+      setCurrentEditRecord(null);
+      setNewAmount(null);
+      
+      // 重新获取数据以更新状态
+      await fetchContractData();
+    } catch (error) {
+      message.error('支付失败，请重试');
+      console.error('支付失败:', error);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // 取消支付
+  const handleCancelEdit = () => {
+    setIsModalVisible(false);
+    setCurrentEditRecord(null);
+    setNewAmount(null);
+  };
+
+  // 打开批量编辑弹窗
+  const handleBatchEdit = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要编辑的项目');
+      return;
+    }
+    setBatchNewAmount(null);
+    setIsBatchModalVisible(true);
+  };
+
+  // 确认批量支付
+  const handleConfirmBatchEdit = async () => {
+    if (batchNewAmount === null) {
+      message.warning('请输入有效金额');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      // 构造批量支付请求参数
+      const paymentRequest: PaymentExecuteRequest = {
+        contractId,
+        paymentAmount: batchNewAmount,
+        bookingDate: new Date().toISOString().split('T')[0], // 当前日期 YYYY-MM-DD
+        selectedPeriods: selectedRowKeys.map(key => Number(key)) // 选中的期次
+      };
+
+      // 调用支付接口
+      const response = await executePayment(paymentRequest);
+      
+      // 显示支付结果
+      message.success(response.message || '批量付款执行成功');
+      
+      // 关闭弹窗并重置状态
+      setIsBatchModalVisible(false);
+      setBatchNewAmount(null);
+      setSelectedRowKeys([]); // 清空选择
+      
+      // 重新获取数据以更新状态
+      await fetchContractData();
+    } catch (error) {
+      message.error('批量支付失败，请重试');
+      console.error('批量支付失败:', error);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // 取消批量支付
+  const handleCancelBatchEdit = () => {
+    setIsBatchModalVisible(false);
+    setBatchNewAmount(null);
+  };
+
+  // 获取选中的记录
+  const getSelectedRecords = (): ContractAmortizationEntry[] => {
+    if (!contractData?.amortization) return [];
+    return contractData.amortization.filter(record => selectedRowKeys.includes(record.id));
+  };
+
+  // 多选处理
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+    onSelectAll: (selected: boolean, selectedRows: ContractAmortizationEntry[], changeRows: ContractAmortizationEntry[]) => {
+      console.log('Select all:', selected, selectedRows, changeRows);
+    },
+    onSelect: (record: ContractAmortizationEntry, selected: boolean, selectedRows: ContractAmortizationEntry[]) => {
+      console.log('Select:', record, selected, selectedRows);
+    },
+  };
+
+  // 预提支付表表头（匹配API返回数据）
   const columns = [
-    { title: '预提时间', dataIndex: 'prepaymentDate', key: 'prepaymentDate' },
-    { title: '入账时间', dataIndex: 'accountingDate', key: 'accountingDate' },
-    { title: '金额', dataIndex: 'amount', key: 'amount' },
-    { title: '备注', dataIndex: 'remark', key: 'remark' },
-    { title: '操作', key: 'action' },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>期次</span>, 
+      dataIndex: 'id', 
+      key: 'id', 
+      width: 80 
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>预提期间</span>, 
+      dataIndex: 'amortizationPeriod', 
+      key: 'amortizationPeriod', 
+      width: 120 
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>会计期间</span>, 
+      dataIndex: 'accountingPeriod', 
+      key: 'accountingPeriod', 
+      width: 120 
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>期间日期</span>, 
+      dataIndex: 'periodDate', 
+      key: 'periodDate', 
+      width: 120 
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>金额（元）</span>, 
+      dataIndex: 'amount', 
+      key: 'amount', 
+      width: 120,
+      render: (amount: number) => (
+        <span style={{ color: '#4A90E2', fontWeight: '600', fontSize: '14px' }}>
+          ¥{amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+      )
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>付款状态</span>, 
+      dataIndex: 'paymentStatus', 
+      key: 'paymentStatus', 
+      width: 100,
+      render: (status: string) => {
+        const statusMap: Record<string, { text: string; color: string; bgColor: string }> = {
+          'PENDING': { text: '待付款', color: '#B45309', bgColor: '#FEF3C7' },
+          'PAID': { text: '已付款', color: '#065F46', bgColor: '#D1FAE5' },
+          'OVERDUE': { text: '逾期', color: '#DC2626', bgColor: '#FEE2E2' }
+        };
+        const statusInfo = statusMap[status] || { text: status, color: '#6B7280', bgColor: '#F3F4F6' };
+        return (
+          <span style={{ 
+            color: statusInfo.color, 
+            fontWeight: '600',
+            fontSize: '13px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            backgroundColor: statusInfo.bgColor
+          }}>
+            {statusInfo.text}
+          </span>
+        );
+      }
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>创建时间</span>, 
+      dataIndex: 'createdAt', 
+      key: 'createdAt', 
+      width: 180,
+      render: (time: string) => (
+        <span style={{ color: '#6B7280', fontSize: '13px' }}>{time}</span>
+      )
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>操作</span>, 
+      key: 'action', 
+      width: 120, 
+      render: (_: any, record: ContractAmortizationEntry) => (
+        <Button 
+          type="primary"
+          size="small" 
+          onClick={() => handleEditAmount(record)}
+          style={{
+            backgroundColor: '#4A90E2',
+            borderColor: '#4A90E2',
+            color: '#FFFFFF',
+            fontWeight: '600',
+            fontSize: '13px',
+            borderRadius: '6px'
+          }}
+          onMouseEnter={(e) => {
+            (e.target as HTMLElement).style.backgroundColor = '#3A7BD5';
+            (e.target as HTMLElement).style.borderColor = '#3A7BD5';
+          }}
+          onMouseLeave={(e) => {
+            (e.target as HTMLElement).style.backgroundColor = '#4A90E2';
+            (e.target as HTMLElement).style.borderColor = '#4A90E2';
+          }}
+        >
+          支付
+        </Button>
+      )
+    },
   ];
 
-  // 空数据源
-  const dataSource: any[] = [];
+  // 会计分录明细表头
+  const journalEntryColumns = [
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>记账日期</span>, 
+      dataIndex: 'bookingDate', 
+      key: 'bookingDate', 
+      width: 120,
+      render: (date: string) => (
+        <span style={{ color: '#6B7280', fontSize: '13px' }}>{date}</span>
+      )
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>会计科目</span>, 
+      dataIndex: 'account', 
+      key: 'account', 
+      width: 120,
+      render: (account: string) => (
+        <span style={{ color: '#1F2937', fontSize: '13px', fontWeight: '500' }}>{account}</span>
+      )
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>借方金额</span>, 
+      dataIndex: 'dr', 
+      key: 'dr', 
+      width: 120,
+      render: (amount: number) => amount > 0 ? (
+        <span style={{ color: '#4A90E2', fontWeight: '600', fontSize: '13px' }}>¥{amount.toFixed(2)}</span>
+      ) : (
+        <span style={{ color: '#9CA3AF', fontSize: '13px' }}>-</span>
+      )
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>贷方金额</span>, 
+      dataIndex: 'cr', 
+      key: 'cr', 
+      width: 120,
+      render: (amount: number) => amount > 0 ? (
+        <span style={{ color: '#4A90E2', fontWeight: '600', fontSize: '13px' }}>¥{amount.toFixed(2)}</span>
+      ) : (
+        <span style={{ color: '#9CA3AF', fontSize: '13px' }}>-</span>
+      )
+    },
+    { 
+      title: <span style={{ color: '#0F172A', fontWeight: '600', fontSize: '14px' }}>备注</span>, 
+      dataIndex: 'memo', 
+      key: 'memo', 
+      width: 150,
+      render: (memo: string) => (
+        <span style={{ color: '#6B7280', fontSize: '13px' }}>{memo}</span>
+      )
+    },
+  ];
 
-  // 按钮事件占位（后续接入具体交互）
-  const onViewContract = () => console.log('查看合同信息');
-  const onViewAccrualEntries = () => console.log('查看预提会计分录');
-  const onViewPaymentEntries = () => console.log('查看付款会计分录');
+  const paymentColumns = [
+    { title: '付款日期', dataIndex: 'paymentDate', key: 'paymentDate' },
+    { title: '科目', dataIndex: 'account', key: 'account' },
+    { title: '金额', dataIndex: 'amount', key: 'amount' },
+    { title: '备注', dataIndex: 'remark', key: 'remark' },
+  ];
+
+
+  const getColumnsByKey = (key: string) => {
+    if (key === 'accrual') return journalEntryColumns as any;
+    if (key === 'payment') return paymentColumns as any;
+    return columns as any;
+  };
+
+  const getDataSourceByKey = (key: string) => {
+    if (key === 'timeline' && contractData) {
+      return contractData.amortization;
+    }
+    // 其他Tab暂时返回空数组
+    return [];
+  };
+
+  // 渲染预提会计分录分组列表
+  const renderAccrualRecords = () => {
+    if (!paymentRecords || paymentRecords.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <Text type="secondary">暂无预提会计分录数据</Text>
+        </div>
+      );
+    }
+
+    const collapseItems = paymentRecords.map((record) => ({
+      key: record.paymentId.toString(),
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div>
+            <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: '15px' }}>
+              支付ID: {record.paymentId}
+            </Text>
+            <Text style={{ marginLeft: 16, color: '#6B7280', fontSize: '14px' }}>
+              合同ID: {record.contractId}
+            </Text>
+            <Text style={{ marginLeft: 16, color: '#4A90E2', fontWeight: '700', fontSize: '15px' }}>
+              支付金额: ¥{record.paymentAmount.toFixed(2)}
+            </Text>
+          </div>
+          <div>
+            <Text style={{ color: '#6B7280', fontSize: '13px' }}>记账日期: {record.bookingDate}</Text>
+            <Text style={{ marginLeft: 16, color: '#6B7280', fontSize: '13px' }}>
+              账期: {record.selectedPeriods.join(', ')}
+            </Text>
+            <Text style={{ 
+              marginLeft: 16, 
+              color: '#4A90E2', 
+              fontWeight: '600',
+              fontSize: '13px',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              backgroundColor: 'rgba(74, 144, 226, 0.1)'
+            }}>
+              状态: {record.status}
+            </Text>
+          </div>
+        </div>
+      ),
+      children: (
+        <Table
+          columns={journalEntryColumns}
+          dataSource={record.journalEntries}
+          pagination={false}
+          size="small"
+          rowKey={(_, index) => `${record.paymentId}-${index}`}
+          style={{ marginTop: 8 }}
+        />
+      ),
+    }));
+
+    return (
+      <Collapse
+        items={collapseItems}
+        size="large"
+        style={{ 
+          marginTop: 16,
+          border: '1px solid #E5E9F2',
+          borderRadius: '8px',
+          backgroundColor: '#F5F7FA'
+        }}
+      />
+    );
+  };
+
+  const contractName = contractData?.contract?.vendorName || '加载中...';
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={4} style={{ marginBottom: 16 }}>合同详情</Title>
-
-      <div style={{ marginBottom: 12 }}>
-        <Text>合同名称：{contractName}</Text>
+    <>
+      <style>
+        {`
+          .outlook-spin .ant-spin-dot-item {
+            background-color: #4A90E2 !important;
+          }
+          .outlook-spin .ant-spin-dot {
+            color: #4A90E2 !important;
+          }
+          .outlook-spin .ant-spin-spinning .ant-spin-dot-item {
+            background-color: #4A90E2 !important;
+          }
+          .ant-tabs .ant-tabs-ink-bar {
+            background-color: #4A90E2 !important;
+          }
+        `}
+      </style>
+      <div style={{ 
+        padding: 24, 
+        backgroundColor: '#FFFFFF',
+        minHeight: '100vh'
+      }}>
+      {/* Outlook风格顶部区域 */}
+      <div style={{
+        backgroundColor: '#4A90E2',
+        marginBottom: 32,
+        padding: '20px 24px',
+        borderRadius: '8px 8px 0 0',
+        marginLeft: '-24px',
+        marginRight: '-24px',
+        marginTop: '-24px'
+      }}>
+        <Title 
+          level={4} 
+          style={{ 
+            marginBottom: 0,
+            color: '#FFFFFF',
+            fontSize: '24px',
+            fontWeight: '600',
+            letterSpacing: '0.5px'
+          }}
+        >
+          合同详情
+        </Title>
       </div>
 
-      <Space size="middle" style={{ marginBottom: 16 }} wrap>
-        <Button type="primary" onClick={onViewContract}>查看合同信息</Button>
-        <Button type="primary" onClick={onViewAccrualEntries}>查看预提会计分录</Button>
-        <Button type="primary" onClick={onViewPaymentEntries}>查看付款会计分录</Button>
-      </Space>
+      {/* 合同基本信息区（包含合同文件） */}
+      <div style={{ 
+        marginBottom: 24, 
+        padding: '20px 24px',
+        backgroundColor: '#F5F7FA',
+        borderRadius: '8px',
+        border: '1px solid #E5E9F2',
+        borderLeft: '4px solid #E5E9F2'
+      }}>
+        <div style={{ marginBottom: '16px' }}>
+          <Text style={{ 
+            color: '#1F2937', 
+            fontSize: '16px',
+            fontWeight: '600',
+            fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+          }}>
+            合同基本信息
+          </Text>
+        </div>
+        <Spin 
+          spinning={loading}
+          className="outlook-spin"
+        >
+          {contractData?.contract ? (
+            <>
+              {/* 紧凑型网格布局 - 四列横向排列 */}
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px',
+                marginBottom: '16px'
+              }}>
+                {/* 合同ID */}
+                <div>
+                  <div style={{ 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    marginBottom: '6px',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    合同 ID：
+                  </div>
+                  <div style={{ 
+                    color: '#1F2937', 
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    {contractData.contract.id}
+                  </div>
+                </div>
 
-      <Table
-        rowKey={(r) => `${r.prepaymentDate || ''}-${r.accountingDate || ''}-${r.amount || ''}`}
-        columns={columns as any}
-        dataSource={dataSource}
-        pagination={false}
-      />
-    </div>
+                {/* 供应商名称 */}
+                <div>
+                  <div style={{ 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    marginBottom: '6px',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    供应商名称：
+                  </div>
+                  <div style={{ 
+                    color: '#1F2937', 
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    {contractData.contract.vendorName}
+                  </div>
+                </div>
+
+                {/* 合同期限 */}
+                <div>
+                  <div style={{ 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    marginBottom: '6px',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    合同期限：
+                  </div>
+                  <div style={{ 
+                    color: '#1F2937', 
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+                    lineHeight: '1.5'
+                  }}>
+                    {contractData.contract.startDate} 至 {contractData.contract.endDate}
+                  </div>
+                </div>
+
+                {/* 合同总金额 */}
+                <div>
+                  <div style={{ 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    marginBottom: '6px',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    合同总金额：
+                  </div>
+                  <div style={{ 
+                    color: '#4A90E2', 
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    ¥{contractData.contract.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元
+                  </div>
+                </div>
+              </div>
+
+              {/* 合同文件与摊销周期 */}
+              <div style={{ 
+                paddingTop: '16px', 
+                borderTop: '1px solid #E5E9F2',
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '24px'
+              }}>
+                {/* 合同文件 */}
+                <div>
+                  <Text style={{ 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    合同文件：
+                  </Text>
+                  <a 
+                    href="/index.html" 
+                    download={`${contractName}.pdf`}
+                    style={{ 
+                      color: '#4A90E2', 
+                      fontWeight: '400',
+                      textDecoration: 'none',
+                      marginLeft: '4px',
+                      fontSize: '14px',
+                      fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                    }}
+                    onMouseEnter={(e) => (e.target as HTMLElement).style.textDecoration = 'underline'}
+                    onMouseLeave={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
+                  >
+                    {contractName}.pdf
+                  </a>
+                </div>
+
+                {/* 摊销周期 */}
+                <div>
+                  <Text style={{ 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    摊销周期：
+                  </Text>
+                  <Text style={{ 
+                    color: '#4A90E2', 
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    marginLeft: '4px',
+                    fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+                  }}>
+                    {calculateAmortizationPeriods()}
+                  </Text>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <Text style={{ 
+                color: '#999999',
+                fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+              }}>
+                暂无合同信息
+              </Text>
+            </div>
+          )}
+        </Spin>
+      </div>
+
+      {/* Tab页和数据表格 */}
+      <div style={{
+        backgroundColor: '#F5F7FA',
+        borderRadius: '8px',
+        padding: '4px',
+        marginBottom: 24,
+        border: '1px solid #E5E9F2'
+      }}>
+        <Tabs
+          activeKey={activeKey}
+          onChange={setActiveKey}
+          items={[
+            { 
+              key: 'timeline', 
+              label: <span style={{ 
+                color: activeKey === 'timeline' ? '#4A90E2' : '#6B7280', 
+                fontWeight: activeKey === 'timeline' ? '600' : '500',
+                fontSize: '14px'
+              }}>预提支付</span>
+            },
+            { 
+              key: 'accrual', 
+              label: <span style={{ 
+                color: activeKey === 'accrual' ? '#4A90E2' : '#6B7280', 
+                fontWeight: activeKey === 'accrual' ? '600' : '500',
+                fontSize: '14px'
+              }}>预提会计分录</span>
+            },
+            { 
+              key: 'payment', 
+              label: <span style={{ 
+                color: activeKey === 'payment' ? '#4A90E2' : '#6B7280', 
+                fontWeight: activeKey === 'payment' ? '600' : '500',
+                fontSize: '14px'
+              }}>付款会计分录</span>
+            },
+          ]}
+          style={{ marginBottom: 0 }}
+        />
+      </div>
+
+      {/* 批量操作提示 */}
+      {selectedRowKeys.length > 0 && activeKey === 'timeline' && (
+        <div style={{ 
+          marginBottom: 16, 
+          padding: '12px 16px', 
+          background: 'rgba(74, 144, 226, 0.05)', 
+          border: '1px solid rgba(74, 144, 226, 0.2)', 
+          borderRadius: '8px',
+          borderLeft: '4px solid #4A90E2'
+        }}>
+          <Text style={{ color: '#6B7280', fontSize: '14px' }}>
+            <strong style={{ color: '#1F2937' }}>已选择 {selectedRowKeys.length} 项，可进行</strong>
+            <Button 
+              type="link" 
+              size="small" 
+              style={{ 
+                padding: '0 8px', 
+                height: 'auto', 
+                color: '#4A90E2', 
+                fontWeight: '600',
+                fontSize: '14px'
+              }}
+              onClick={handleBatchEdit}
+            >
+              批量操作
+            </Button>
+          </Text>
+        </div>
+      )}
+
+      <Spin 
+        spinning={loading}
+        className="outlook-spin"
+      >
+        {activeKey === 'accrual' ? (
+          renderAccrualRecords()
+        ) : (
+          <Table
+            rowKey={(record) => record.id || Math.random()}
+            columns={getColumnsByKey(activeKey)}
+            dataSource={getDataSourceByKey(activeKey)}
+            pagination={false}
+            scroll={{ x: 1000 }}
+            size="middle"
+            rowSelection={activeKey === 'timeline' ? rowSelection : undefined}
+          />
+        )}
+      </Spin>
+
+      {/* 支付弹窗 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{
+              width: '4px',
+              height: '20px',
+              backgroundColor: '#4A90E2',
+              marginRight: '12px'
+            }}></div>
+            <span style={{ color: '#0F172A', fontSize: '18px', fontWeight: '600' }}>支付</span>
+          </div>
+        }
+        open={isModalVisible}
+        onOk={handleConfirmEdit}
+        onCancel={handleCancelEdit}
+        okText={<span style={{ fontWeight: '600' }}>确定</span>}
+        cancelText={<span style={{ fontWeight: '600' }}>取消</span>}
+        width={420}
+        confirmLoading={paymentLoading}
+        okButtonProps={{
+          style: {
+            backgroundColor: '#4A90E2',
+            borderColor: '#4A90E2',
+            color: '#FFFFFF',
+            fontWeight: '600',
+            borderRadius: '6px'
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            borderColor: '#E5E9F2',
+            color: '#6B7280',
+            fontWeight: '600',
+            borderRadius: '6px'
+          }
+        }}
+      >
+        <div style={{ padding: '20px 0' }}>
+          <Space direction="vertical" style={{ width: '100%' }} size={16}>
+            <Text style={{ color: '#6B7280', fontSize: '14px' }}>
+              <strong style={{ color: '#1F2937' }}>期次：</strong>第 {currentEditRecord?.id} 期
+            </Text>
+            <Text style={{ color: '#6B7280', fontSize: '14px' }}>
+              <strong style={{ color: '#1F2937' }}>当前金额：</strong>
+              <span style={{ color: '#4A90E2', fontWeight: '700', fontSize: '15px' }}>
+                ¥{currentEditRecord?.amount.toFixed(2)}
+              </span>
+            </Text>
+            <div>
+              <Text style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                color: '#1F2937', 
+                fontWeight: '600',
+                fontSize: '14px'
+              }}>
+                支付金额：
+              </Text>
+              <InputNumber
+                style={{ 
+                  width: '100%',
+                  borderRadius: '6px'
+                }}
+                value={newAmount}
+                onChange={(value) => setNewAmount(value)}
+                precision={2}
+                min={0}
+                max={999999999}
+                prefix="¥"
+                placeholder="请输入支付金额"
+                size="large"
+              />
+            </div>
+          </Space>
+        </div>
+      </Modal>
+
+      {/* 批量支付弹窗 */}
+      <Modal
+        title="批量支付"
+        open={isBatchModalVisible}
+        onOk={handleConfirmBatchEdit}
+        onCancel={handleCancelBatchEdit}
+        okText="确定"
+        cancelText="取消"
+        width={600}
+        confirmLoading={paymentLoading}
+      >
+        <div style={{ padding: '20px 0' }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Text>
+              <strong>已选择 {selectedRowKeys.length} 项进行批量更改：</strong>
+            </Text>
+            
+            {/* 显示选中的期次和金额信息 */}
+            <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #d9d9d9', borderRadius: '6px', padding: '12px' }}>
+              {getSelectedRecords().map((record, index) => (
+                <div key={record.id} style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  padding: '4px 0',
+                  borderBottom: index < getSelectedRecords().length - 1 ? '1px solid #f0f0f0' : 'none'
+                }}>
+                  <Text>第 {record.id} 期 ({record.amortizationPeriod})</Text>
+                  <Text>当前金额：¥{record.amount.toFixed(2)}</Text>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <Text style={{ display: 'block', marginBottom: '8px' }}>
+                <strong>批量支付金额：</strong>
+              </Text>
+              <InputNumber
+                style={{ width: '100%' }}
+                value={batchNewAmount}
+                onChange={(value) => setBatchNewAmount(value)}
+                precision={2}
+                min={0}
+                max={999999999}
+                prefix="¥"
+                placeholder="请输入批量支付金额（将应用到所有选中项）"
+              />
+            </div>
+          </Space>
+        </div>
+      </Modal>
+      </div>
+    </>
   );
 };
 
