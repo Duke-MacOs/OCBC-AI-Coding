@@ -4,6 +4,8 @@ import { EditableProTable } from '@ant-design/pro-components';
 import type { ProColumns } from '@ant-design/pro-components';
 import { DeleteOutlined } from '@ant-design/icons';
 import { ContractConfirmModalProps, PrepaymentItem, ContractInfo } from './types';
+import { updateContract, operateAmortization } from '../../api';
+import type { AmortizationEntryDetail } from '../../api/amortization';
 import styles from './styles.module.css';
 
 // 时间格式化辅助函数
@@ -28,6 +30,8 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
 }) => {
   // 表格数据状态管理
   const [dataSource, setDataSource] = useState<PrepaymentItem[]>(prepaymentData);
+  // 提交状态
+  const [submitting, setSubmitting] = useState(false);
 
   // 监听弹窗显示状态和数据变化，管理数据加载和清空
   useEffect(() => {
@@ -179,7 +183,12 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
   }, [dataSource]);
 
   // 确认按钮处理
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
+    if (!contractInfo) {
+      message.error('合同信息不存在');
+      return;
+    }
+
     // 获取当前最新的表格数据
     const currentData = [...dataSource];
     
@@ -199,12 +208,54 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
     console.log('详细数据:', currentData);
     console.table(currentData);
     
-    // 传递最新数据给父组件
-    onConfirm(currentData);
+    setSubmitting(true);
     
-    // 确认成功后清空数据（为下次打开做准备）
-    setDataSource([]);
-  }, [dataSource, onConfirm]);
+    try {
+      // 1. 调用更新合同信息接口
+      const updateContractResponse = await updateContract(contractInfo.contractId, {
+        totalAmount: contractInfo.totalAmount,
+        startDate: contractInfo.startDate,
+        endDate: contractInfo.endDate,
+        taxRate: contractInfo.taxRate,
+        vendorName: contractInfo.vendorName,
+      });
+      
+      console.log('更新合同信息成功:', updateContractResponse);
+      
+      // 2. 调用摊销明细操作接口
+      // 将 PrepaymentItem 转换为 AmortizationEntryDetail
+      const amortizationEntries: AmortizationEntryDetail[] = currentData.map(item => ({
+        // 如果 id 是临时字符串 ID（以 temp_ 开头），转换为 null（表示新增）
+        // 如果是数字 ID，保持原值（表示更新）
+        id: typeof item.id === 'string' && item.id.startsWith('temp_') ? null : Number(item.id),
+        amortizationPeriod: item.amortizationPeriod,
+        accountingPeriod: item.accountingPeriod,
+        amount: item.amount,
+        periodDate: item.amortizationPeriod, // 使用摊销期间作为期间日期
+        paymentStatus: item.status || 'PENDING',
+      }));
+      
+      const operateResponse = await operateAmortization({
+        contractId: contractInfo.contractId,
+        amortization: amortizationEntries,
+      });
+      
+      console.log('摊销明细操作成功:', operateResponse);
+      
+      message.success('合同信息和摊销明细已保存');
+      
+      // 传递最新数据给父组件
+      onConfirm(currentData);
+      
+      // 确认成功后清空数据（为下次打开做准备）
+      setDataSource([]);
+    } catch (error: any) {
+      console.error('保存失败:', error);
+      message.error(error?.message || '保存失败，请重试');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [dataSource, contractInfo, onConfirm]);
 
   // 取消按钮处理
   const handleCancel = useCallback(() => {
@@ -230,10 +281,10 @@ const ContractConfirmModal: React.FC<ContractConfirmModalProps> = ({
       maskClosable={false}
       onCancel={handleCancel}
       footer={[
-        <Button key="cancel" onClick={handleCancel}>
+        <Button key="cancel" onClick={handleCancel} disabled={submitting}>
           取消
         </Button>,
-        <Button key="confirm" type="primary" onClick={handleConfirm}>
+        <Button key="confirm" type="primary" onClick={handleConfirm} loading={submitting}>
           确认
         </Button>,
       ]}

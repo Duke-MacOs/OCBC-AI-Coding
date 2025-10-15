@@ -5,7 +5,9 @@ import {
   AmortizationCalculateResponse,
   AmortizationScenario,
   AmortizationStatus,
-  AmortizationEntry
+  AmortizationEntry,
+  UpdateContractRequest,
+  UpdateContractResponse
 } from './types';
 
 /**
@@ -150,5 +152,34 @@ export const getMockAmortizationCalculate = (contractId: number): AmortizationCa
     scenario: AmortizationScenario.SCENARIO_1,
     generatedAt: new Date().toISOString(),
     entries,
+  };
+};
+
+/**
+ * 生成更新合同 Mock 数据
+ * @param contractId 合同ID
+ * @param request 更新请求参数
+ */
+export const getMockUpdateContractResponse = (
+  contractId: number,
+  request: UpdateContractRequest
+): UpdateContractResponse => {
+  // 从 mock 合同列表中查找对应合同
+  const contract = mockContractsList.contracts.find(c => c.contractId === contractId);
+  
+  // 使用合同的原始附件名和创建时间，或使用默认值
+  const attachmentName = contract?.attachmentName || `contract_${new Date().getTime()}.pdf`;
+  const createdAt = contract?.createdAt || new Date().toISOString();
+  
+  return {
+    contractId,
+    totalAmount: request.totalAmount,
+    startDate: request.startDate,
+    endDate: request.endDate,
+    taxRate: request.taxRate,
+    vendorName: request.vendorName,
+    attachmentName,
+    createdAt,
+    message: '合同信息更新成功',
   };
 };
