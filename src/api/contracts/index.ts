@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '../client';
+import { apiGet, apiPost, apiPut } from '../client';
 import { 
   ContractsListResponse, 
   PaginationParams, 
@@ -7,7 +7,9 @@ import {
   ContractAmortizationResponse,
   PaymentExecuteRequest,
   PaymentExecuteResponse,
-  ContractPaymentRecordsResponse
+  ContractPaymentRecordsResponse,
+  UpdateContractRequest,
+  UpdateContractResponse
 } from './types';
 import { 
   mockContractsList, 
@@ -16,7 +18,8 @@ import {
   getMockAmortizationCalculate,
   getMockContractAmortizationEntries,
   getMockPaymentExecuteResponse,
-  getMockContractPaymentRecords
+  getMockContractPaymentRecords,
+  getMockUpdateContractResponse
 } from './mock';
 
 // 是否使用 Mock 数据（可通过环境变量控制）
@@ -176,6 +179,29 @@ export const getContractPaymentRecords = async (
     `/payments/contracts/${contractId}`
   );
   return response as unknown as ContractPaymentRecordsResponse;
+}
+/*
+ * 更新合同信息
+ * @param contractId 合同ID
+ * @param request 更新合同请求参数
+ * @returns 更新合同响应
+ */
+export const updateContract = async (
+  contractId: number,
+  request: UpdateContractRequest
+): Promise<UpdateContractResponse> => {
+  if (USE_MOCK) {
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return Promise.resolve(getMockUpdateContractResponse(contractId, request));
+  }
+
+  // 真实 API 调用 (待替换为真实 URL)
+  const response = await apiPut<UpdateContractResponse>(
+    `${MOCK_API_BASE}/contracts/${contractId}`,
+    request
+  );
+  return response as unknown as UpdateContractResponse;
 };
 
 // 导出类型
