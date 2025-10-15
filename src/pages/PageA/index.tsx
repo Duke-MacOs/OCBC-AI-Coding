@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Upload, 
   Table, 
@@ -12,7 +13,6 @@ import {
 import { 
   InboxOutlined, 
   EyeOutlined, 
-  EditOutlined, 
   DeleteOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
@@ -29,6 +29,8 @@ const { Dragger } = Upload;
 const { Title } = Typography;
 
 const PageA: React.FC<PageAProps> = () => {
+  const navigate = useNavigate();
+  
   // 状态管理
   const [uploadedFiles, setUploadedFiles] = useState<UploadFile[]>([]);
   const [contractList, setContractList] = useState<ContractData[]>([]);
@@ -170,14 +172,6 @@ const PageA: React.FC<PageAProps> = () => {
             查看
           </Button>
           <Button 
-            size="small"
-            icon={<EditOutlined />}
-            className={styles.actionButton}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button 
             danger 
             size="small"
             icon={<DeleteOutlined />}
@@ -193,14 +187,9 @@ const PageA: React.FC<PageAProps> = () => {
 
   // 操作处理函数
   const handleView = useCallback((record: ContractData) => {
-    message.info(`查看合同: ${record.attachmentName}`);
-    // TODO: 实现文件预览或跳转到详情页
-  }, []);
-
-  const handleEdit = useCallback((record: ContractData) => {
-    message.info(`编辑合同: ${record.attachmentName}`);
-    // TODO: 实现编辑功能，比如打开编辑弹窗
-  }, []);
+    // 跳转到合同详情页，并将合同ID放入URL
+    navigate(`/contract/${record.contractId}`);
+  }, [navigate]);
 
   const handleDelete = useCallback((record: ContractData) => {
     setLoading(true);

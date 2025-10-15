@@ -271,3 +271,42 @@ export interface PaymentRecord {
  * 合同支付记录列表响应
  */
 export type ContractPaymentRecordsResponse = PaymentRecord[];
+/* 
+* 更新合同请求参数
+ */
+export interface UpdateContractRequest {
+  /** 合同总金额，必须大于0 */
+  totalAmount: number;
+  /** 合同开始时间，格式：yyyy-MM-dd */
+  startDate: string;
+  /** 合同结束时间，格式：yyyy-MM-dd */
+  endDate: string;
+  /** 税率，如0.06表示6% */
+  taxRate: number;
+  /** 供应商名称，不能为空 */
+  vendorName: string;
+}
+
+/**
+ * 更新合同响应
+ */
+export interface UpdateContractResponse {
+  /** 合同ID */
+  contractId: number;
+  /** 合同总金额 */
+  totalAmount: number;
+  /** 合同开始时间 */
+  startDate: string;
+  /** 合同结束时间 */
+  endDate: string;
+  /** 税率 */
+  taxRate: number;
+  /** 供应商名称 */
+  vendorName: string;
+  /** 合同附件名称 */
+  attachmentName: string;
+  /** 创建时间 */
+  createdAt: string;
+  /** 操作消息 */
+  message: string;
+}
