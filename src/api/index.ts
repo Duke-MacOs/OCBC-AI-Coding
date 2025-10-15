@@ -1,7 +1,6 @@
 export { default as axiosInstance, apiGet, apiPost, apiPut, apiDelete } from './client';
 
-// 合同相关 API
+// API 统一导出
 export * from './contracts';
-
-// 摊销明细相关 API
 export * from './amortization';
+export * from './journalEntries';
