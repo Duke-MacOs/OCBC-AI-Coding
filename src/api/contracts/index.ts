@@ -3,13 +3,20 @@ import {
   ContractsListResponse, 
   PaginationParams, 
   ContractUploadResponse,
-  AmortizationCalculateResponse
+  AmortizationCalculateResponse,
+  ContractAmortizationResponse,
+  PaymentExecuteRequest,
+  PaymentExecuteResponse,
+  ContractPaymentRecordsResponse
 } from './types';
 import { 
   mockContractsList, 
   getMockContractsListPaginated, 
   getMockContractUploadResponse,
-  getMockAmortizationCalculate
+  getMockAmortizationCalculate,
+  getMockContractAmortizationEntries,
+  getMockPaymentExecuteResponse,
+  getMockContractPaymentRecords
 } from './mock';
 
 // 是否使用 Mock 数据（可通过环境变量控制）
@@ -105,6 +112,70 @@ export const calculateAmortization = async (
     `${MOCK_API_BASE}/amortization/calculate/${contractId}`
   );
   return response as unknown as AmortizationCalculateResponse;
+};
+
+/**
+ * 查询合同摊销明细列表
+ * @param contractId 合同ID
+ * @returns 合同摊销明细响应
+ */
+export const getContractAmortizationEntries = async (
+  contractId: number
+): Promise<ContractAmortizationResponse> => {
+  if (USE_MOCK) {
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return Promise.resolve(getMockContractAmortizationEntries(contractId));
+  }
+
+  // 真实 API 调用 (待替换为真实 URL)
+  const response = await apiGet<ContractAmortizationResponse>(
+    `/amortization-entries/contract/${contractId}`
+  );
+  return response as unknown as ContractAmortizationResponse;
+};
+
+/**
+ * 执行支付
+ * @param request 支付请求参数
+ * @returns 支付执行响应
+ */
+export const executePayment = async (
+  request: PaymentExecuteRequest
+): Promise<PaymentExecuteResponse> => {
+  if (USE_MOCK) {
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return Promise.resolve(getMockPaymentExecuteResponse(request));
+  }
+
+  // 真实 API 调用 (待替换为真实 URL)
+  const response = await apiPost<PaymentExecuteResponse>(
+    '/payments/execute',
+    request
+  );
+  return response as unknown as PaymentExecuteResponse;
+};
+
+/**
+ * 查询合同支付记录列表（预提会计分录）
+ * @param contractId 合同ID
+ * @returns 合同支付记录列表
+ */
+export const getContractPaymentRecords = async (
+  contractId: number
+): Promise<ContractPaymentRecordsResponse> => {
+  if (USE_MOCK) {
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return Promise.resolve(getMockContractPaymentRecords(contractId));
+  }
+
+  // 真实 API 调用 (待替换为真实 URL)
+  const response = await apiGet<ContractPaymentRecordsResponse>(
+    `/payments/contracts/${contractId}`
+  );
+  return response as unknown as ContractPaymentRecordsResponse;
 };
 
 // 导出类型
