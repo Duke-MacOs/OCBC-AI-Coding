@@ -267,7 +267,7 @@ const ContractDetail: React.FC = () => {
       key: 'amount', 
       width: 120,
       render: (amount: number) => (
-        <span style={{ color: '#4A90E2', fontWeight: '600', fontSize: '14px' }}>
+        <span style={{ color: '#E31E24', fontWeight: '600', fontSize: '14px' }}>
           ¥{amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       )
@@ -317,20 +317,20 @@ const ContractDetail: React.FC = () => {
           size="small" 
           onClick={() => handleEditAmount(record)}
           style={{
-            backgroundColor: '#4A90E2',
-            borderColor: '#4A90E2',
+            backgroundColor: '#E31E24',
+            borderColor: '#E31E24',
             color: '#FFFFFF',
             fontWeight: '600',
             fontSize: '13px',
-            borderRadius: '6px'
+            borderRadius: '8px'
           }}
           onMouseEnter={(e) => {
-            (e.target as HTMLElement).style.backgroundColor = '#3A7BD5';
-            (e.target as HTMLElement).style.borderColor = '#3A7BD5';
+            (e.target as HTMLElement).style.backgroundColor = '#C41E3A';
+            (e.target as HTMLElement).style.borderColor = '#C41E3A';
           }}
           onMouseLeave={(e) => {
-            (e.target as HTMLElement).style.backgroundColor = '#4A90E2';
-            (e.target as HTMLElement).style.borderColor = '#4A90E2';
+            (e.target as HTMLElement).style.backgroundColor = '#E31E24';
+            (e.target as HTMLElement).style.borderColor = '#E31E24';
           }}
         >
           支付
@@ -365,7 +365,7 @@ const ContractDetail: React.FC = () => {
       key: 'dr', 
       width: 120,
       render: (amount: number) => amount > 0 ? (
-        <span style={{ color: '#4A90E2', fontWeight: '600', fontSize: '13px' }}>¥{amount.toFixed(2)}</span>
+        <span style={{ color: '#E31E24', fontWeight: '600', fontSize: '13px' }}>¥{amount.toFixed(2)}</span>
       ) : (
         <span style={{ color: '#9CA3AF', fontSize: '13px' }}>-</span>
       )
@@ -376,7 +376,7 @@ const ContractDetail: React.FC = () => {
       key: 'cr', 
       width: 120,
       render: (amount: number) => amount > 0 ? (
-        <span style={{ color: '#4A90E2', fontWeight: '600', fontSize: '13px' }}>¥{amount.toFixed(2)}</span>
+        <span style={{ color: '#E31E24', fontWeight: '600', fontSize: '13px' }}>¥{amount.toFixed(2)}</span>
       ) : (
         <span style={{ color: '#9CA3AF', fontSize: '13px' }}>-</span>
       )
@@ -435,7 +435,7 @@ const ContractDetail: React.FC = () => {
             <Text style={{ marginLeft: 16, color: '#6B7280', fontSize: '14px' }}>
               合同ID: {record.contractId}
             </Text>
-            <Text style={{ marginLeft: 16, color: '#4A90E2', fontWeight: '700', fontSize: '15px' }}>
+            <Text style={{ marginLeft: 16, color: '#E31E24', fontWeight: '700', fontSize: '15px' }}>
               支付金额: ¥{record.paymentAmount.toFixed(2)}
             </Text>
           </div>
@@ -446,12 +446,12 @@ const ContractDetail: React.FC = () => {
             </Text>
             <Text style={{ 
               marginLeft: 16, 
-              color: '#4A90E2', 
+              color: '#E31E24', 
               fontWeight: '600',
               fontSize: '13px',
               padding: '2px 8px',
               borderRadius: '4px',
-              backgroundColor: 'rgba(74, 144, 226, 0.1)'
+              backgroundColor: 'rgba(227, 30, 36, 0.1)'
             }}>
               状态: {record.status}
             </Text>
@@ -476,9 +476,9 @@ const ContractDetail: React.FC = () => {
         size="large"
         style={{ 
           marginTop: 16,
-          border: '1px solid #E5E9F2',
-          borderRadius: '8px',
-          backgroundColor: '#F5F7FA'
+          border: '1px solid #E5E5E5',
+          borderRadius: '12px',
+          backgroundColor: '#FFFFFF'
         }}
       />
     );
@@ -491,16 +491,16 @@ const ContractDetail: React.FC = () => {
       <style>
         {`
           .outlook-spin .ant-spin-dot-item {
-            background-color: #4A90E2 !important;
+            background-color: #E31E24 !important;
           }
           .outlook-spin .ant-spin-dot {
-            color: #4A90E2 !important;
+            color: #E31E24 !important;
           }
           .outlook-spin .ant-spin-spinning .ant-spin-dot-item {
-            background-color: #4A90E2 !important;
+            background-color: #E31E24 !important;
           }
           .ant-tabs .ant-tabs-ink-bar {
-            background-color: #4A90E2 !important;
+            background-color: #E31E24 !important;
           }
         `}
       </style>
@@ -509,22 +509,18 @@ const ContractDetail: React.FC = () => {
         backgroundColor: '#FFFFFF',
         minHeight: '100vh'
       }}>
-      {/* Outlook风格顶部区域 */}
+      {/* 合同详情标题 */}
       <div style={{
-        backgroundColor: '#4A90E2',
-        marginBottom: 32,
-        padding: '20px 24px',
-        borderRadius: '8px 8px 0 0',
-        marginLeft: '-24px',
-        marginRight: '-24px',
-        marginTop: '-24px'
+        backgroundColor: 'transparent',
+        marginBottom: 24,
+        padding: 0
       }}>
         <Title 
           level={4} 
           style={{ 
             marginBottom: 0,
-            color: '#FFFFFF',
-            fontSize: '24px',
+            color: '#333333',
+            fontSize: '20px',
             fontWeight: '600',
             letterSpacing: '0.5px'
           }}
@@ -533,14 +529,14 @@ const ContractDetail: React.FC = () => {
         </Title>
       </div>
 
-      {/* 合同基本信息区（包含合同文件） */}
+      {/* 合同基本信息区 */}
       <div style={{ 
         marginBottom: 24, 
-        padding: '20px 24px',
-        backgroundColor: '#F5F7FA',
-        borderRadius: '8px',
-        border: '1px solid #E5E9F2',
-        borderLeft: '4px solid #E5E9F2'
+        padding: '16px 20px',
+        backgroundColor: '#FFFFFF',
+        borderRadius: '12px',
+        border: '1px solid #E5E5E5',
+        borderLeft: '4px solid #E31E24'
       }}>
         <div style={{ marginBottom: '16px' }}>
           <Text style={{ 
@@ -641,9 +637,9 @@ const ContractDetail: React.FC = () => {
                     合同总金额：
                   </div>
                   <div style={{ 
-                    color: '#4A90E2', 
+                    color: '#E31E24', 
                     fontSize: '14px',
-                    fontWeight: '400',
+                    fontWeight: '600',
                     fontFamily: 'Microsoft YaHei, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
                   }}>
                     ¥{contractData.contract.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元
@@ -654,7 +650,7 @@ const ContractDetail: React.FC = () => {
               {/* 合同文件与摊销周期 */}
               <div style={{ 
                 paddingTop: '16px', 
-                borderTop: '1px solid #E5E9F2',
+                borderTop: '1px solid #E5E5E5',
                 display: 'flex',
                 alignItems: 'center',
                 flexWrap: 'wrap',
@@ -699,7 +695,7 @@ const ContractDetail: React.FC = () => {
                     摊销周期：
                   </Text>
                   <Text style={{ 
-                    color: '#4A90E2', 
+                    color: '#E31E24', 
                     fontSize: '14px',
                     fontWeight: '400',
                     marginLeft: '4px',
@@ -725,11 +721,11 @@ const ContractDetail: React.FC = () => {
 
       {/* Tab页和数据表格 */}
       <div style={{
-        backgroundColor: '#F5F7FA',
-        borderRadius: '8px',
+        backgroundColor: '#FFFFFF',
+        borderRadius: '12px',
         padding: '4px',
         marginBottom: 24,
-        border: '1px solid #E5E9F2'
+        border: '1px solid #E5E5E5'
       }}>
         <Tabs
           activeKey={activeKey}
@@ -738,7 +734,7 @@ const ContractDetail: React.FC = () => {
             { 
               key: 'timeline', 
               label: <span style={{ 
-                color: activeKey === 'timeline' ? '#4A90E2' : '#6B7280', 
+                color: activeKey === 'timeline' ? '#E31E24' : '#6B7280', 
                 fontWeight: activeKey === 'timeline' ? '600' : '500',
                 fontSize: '14px'
               }}>预提支付</span>
@@ -746,7 +742,7 @@ const ContractDetail: React.FC = () => {
             { 
               key: 'accrual', 
               label: <span style={{ 
-                color: activeKey === 'accrual' ? '#4A90E2' : '#6B7280', 
+                color: activeKey === 'accrual' ? '#E31E24' : '#6B7280', 
                 fontWeight: activeKey === 'accrual' ? '600' : '500',
                 fontSize: '14px'
               }}>预提会计分录</span>
@@ -754,7 +750,7 @@ const ContractDetail: React.FC = () => {
             { 
               key: 'payment', 
               label: <span style={{ 
-                color: activeKey === 'payment' ? '#4A90E2' : '#6B7280', 
+                color: activeKey === 'payment' ? '#E31E24' : '#6B7280', 
                 fontWeight: activeKey === 'payment' ? '600' : '500',
                 fontSize: '14px'
               }}>付款会计分录</span>
@@ -769,10 +765,10 @@ const ContractDetail: React.FC = () => {
         <div style={{ 
           marginBottom: 16, 
           padding: '12px 16px', 
-          background: 'rgba(74, 144, 226, 0.05)', 
-          border: '1px solid rgba(74, 144, 226, 0.2)', 
-          borderRadius: '8px',
-          borderLeft: '4px solid #4A90E2'
+          background: 'rgba(227, 30, 36, 0.05)', 
+          border: '1px solid rgba(227, 30, 36, 0.2)', 
+          borderRadius: '12px',
+          borderLeft: '4px solid #E31E24'
         }}>
           <Text style={{ color: '#6B7280', fontSize: '14px' }}>
             <strong style={{ color: '#1F2937' }}>已选择 {selectedRowKeys.length} 项，可进行</strong>
@@ -782,7 +778,7 @@ const ContractDetail: React.FC = () => {
               style={{ 
                 padding: '0 8px', 
                 height: 'auto', 
-                color: '#4A90E2', 
+                color: '#E31E24', 
                 fontWeight: '600',
                 fontSize: '14px'
               }}
@@ -820,7 +816,7 @@ const ContractDetail: React.FC = () => {
             <div style={{
               width: '4px',
               height: '20px',
-              backgroundColor: '#4A90E2',
+              backgroundColor: '#E31E24',
               marginRight: '12px'
             }}></div>
             <span style={{ color: '#0F172A', fontSize: '18px', fontWeight: '600' }}>支付</span>
@@ -835,19 +831,19 @@ const ContractDetail: React.FC = () => {
         confirmLoading={paymentLoading}
         okButtonProps={{
           style: {
-            backgroundColor: '#4A90E2',
-            borderColor: '#4A90E2',
+            backgroundColor: '#E31E24',
+            borderColor: '#E31E24',
             color: '#FFFFFF',
             fontWeight: '600',
-            borderRadius: '6px'
+            borderRadius: '8px'
           }
         }}
         cancelButtonProps={{
           style: {
-            borderColor: '#E5E9F2',
+            borderColor: '#E5E5E5',
             color: '#6B7280',
             fontWeight: '600',
-            borderRadius: '6px'
+            borderRadius: '8px'
           }
         }}
       >
@@ -858,7 +854,7 @@ const ContractDetail: React.FC = () => {
             </Text>
             <Text style={{ color: '#6B7280', fontSize: '14px' }}>
               <strong style={{ color: '#1F2937' }}>当前金额：</strong>
-              <span style={{ color: '#4A90E2', fontWeight: '700', fontSize: '15px' }}>
+              <span style={{ color: '#E31E24', fontWeight: '700', fontSize: '15px' }}>
                 ¥{currentEditRecord?.amount.toFixed(2)}
               </span>
             </Text>
