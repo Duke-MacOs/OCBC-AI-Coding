@@ -1,7 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-// 从环境变量读取后端地址，默认 '/api'（可通过 Vite 代理转发）
-const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
+// 生产环境后端地址
+const baseURL = 'http://localhost:8081/api';
 
 const axiosInstance = axios.create({
   baseURL,

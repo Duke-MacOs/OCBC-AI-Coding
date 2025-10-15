@@ -6,8 +6,8 @@ import {
 } from './types';
 import { mockJournalEntriesPreviewMap } from './mock';
 
-// 是否使用Mock数据
-const USE_MOCK = true;
+// 是否使用Mock数据 - 生产环境关闭Mock
+const USE_MOCK = false;
 
 /**
  * 获取预提会计分录预览数据
@@ -33,7 +33,7 @@ export const getJournalEntriesPreview = async (
 
   // 真实API调用
   try {
-    const response = await fetch('/api/journal-entries/preview', {
+    const response = await fetch('/journal-entries/preview', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,13 +42,13 @@ export const getJournalEntriesPreview = async (
     });
 
     if (!response.ok) {
-      throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: JournalEntriesPreviewResponse = await response.json();
+    const data = await response.json();
     return data;
   } catch (error) {
-    console.error('获取预提会计分录预览数据失败:', error);
+    console.error('获取预提会计分录预览失败:', error);
     throw error;
   }
 };

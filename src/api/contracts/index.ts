@@ -22,11 +22,9 @@ import {
   getMockUpdateContractResponse
 } from './mock';
 
-// 是否使用 Mock 数据（可通过环境变量控制）
-const USE_MOCK = (import.meta as any).env?.VITE_USE_MOCK === 'true' || true;
+// 是否使用 Mock 数据 - 生产环境关闭 Mock
+const USE_MOCK = false;
 
-// Mock API URLs (待替换为真实地址)
-const MOCK_API_BASE = '/mock-api';
 
 /**
  * 查询所有合同列表
@@ -39,8 +37,8 @@ export const getAllContracts = async (): Promise<ContractsListResponse> => {
     return Promise.resolve(mockContractsList);
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
-  const response = await apiGet<ContractsListResponse>(`${MOCK_API_BASE}/contracts`);
+  // 真实 API 调用
+  const response = await apiGet<ContractsListResponse>('/contracts');
   return response as unknown as ContractsListResponse;
 };
 
@@ -60,9 +58,9 @@ export const getContractsList = async (
     return Promise.resolve(getMockContractsListPaginated(page, size));
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
+  // 真实 API 调用
   const response = await apiGet<ContractsListResponse>(
-    `${MOCK_API_BASE}/contracts/list`,
+    '/contracts/list',
     { page, size }
   );
   return response as unknown as ContractsListResponse;
@@ -80,12 +78,12 @@ export const uploadContract = async (file: File): Promise<ContractUploadResponse
     return Promise.resolve(getMockContractUploadResponse(file.name));
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
+  // 真实 API 调用
   const formData = new FormData();
   formData.append('file', file);
 
   const response = await apiPost<ContractUploadResponse>(
-    `${MOCK_API_BASE}/contracts/upload`,
+    '/contracts/upload',
     formData,
     {
       headers: {
@@ -110,9 +108,9 @@ export const calculateAmortization = async (
     return Promise.resolve(getMockAmortizationCalculate(contractId));
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
+  // 真实 API 调用
   const response = await apiGet<AmortizationCalculateResponse>(
-    `${MOCK_API_BASE}/amortization/calculate/${contractId}`
+    `/amortization/calculate/${contractId}`
   );
   return response as unknown as AmortizationCalculateResponse;
 };
@@ -196,9 +194,9 @@ export const updateContract = async (
     return Promise.resolve(getMockUpdateContractResponse(contractId, request));
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
+  // 真实 API 调用
   const response = await apiPut<UpdateContractResponse>(
-    `${MOCK_API_BASE}/contracts/${contractId}`,
+    `/contracts/${contractId}`,
     request
   );
   return response as unknown as UpdateContractResponse;

@@ -9,11 +9,9 @@ import {
   getMockAmortizationOperateResponse,
 } from './mock';
 
-// 是否使用 Mock 数据（可通过环境变量控制）
-const USE_MOCK = (import.meta as any).env?.VITE_USE_MOCK === 'true' || true;
+// 是否使用 Mock 数据 - 生产环境关闭Mock
+const USE_MOCK = false;
 
-// Mock API URLs (待替换为真实地址)
-const MOCK_API_BASE = '/mock-api';
 
 /**
  * 查询指定合同的摊销明细列表
@@ -29,9 +27,9 @@ export const getAmortizationList = async (
     return Promise.resolve(getMockAmortizationList(contractId));
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
+  // 真实 API 调用
   const response = await apiGet<AmortizationListResponse>(
-    `${MOCK_API_BASE}/amortization-entries/contract/${contractId}`
+    `/amortization-entries/contract/${contractId}`
   );
   return response as unknown as AmortizationListResponse;
 };
@@ -56,9 +54,9 @@ export const operateAmortization = async (
     return Promise.resolve(getMockAmortizationOperateResponse(request));
   }
 
-  // 真实 API 调用 (待替换为真实 URL)
+  // 真实 API 调用
   const response = await apiPost<AmortizationOperateResponse>(
-    `${MOCK_API_BASE}/amortization-entries/operate`,
+    '/amortization-entries/operate',
     request
   );
   return response as unknown as AmortizationOperateResponse;
