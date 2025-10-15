@@ -3,7 +3,7 @@ import type { ThemeConfig } from 'antd';
 export const theme: ThemeConfig = {
   token: {
     // 主色调
-    // colorPrimary: '#b5120f',
+    colorPrimary: '#b5120f',
     // 背景色
     colorBgBase: '#F5F5DC',
     colorIcon: '#b5120f',
@@ -17,7 +17,7 @@ export const theme: ThemeConfig = {
   },
   components: {
     Layout: {
-      headerBg: '#F5F5DC',
+      headerBg: 'rgba(255,255,255,0.6)',
       bodyBg: '#F5F5DC',
     },
     Button: {

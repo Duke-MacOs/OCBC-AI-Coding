@@ -7,7 +7,7 @@ import {
 import { mockJournalEntriesPreviewMap } from './mock';
 
 // 是否使用Mock数据 - 生产环境关闭Mock
-const USE_MOCK = false;
+const USE_MOCK = true;
 
 /**
  * 获取预提会计分录预览数据

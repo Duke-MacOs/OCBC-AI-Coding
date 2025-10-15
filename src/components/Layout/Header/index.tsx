@@ -1,17 +1,20 @@
 import React from 'react';
 import { Layout, Typography } from 'antd';
+import AppMenu from '../../Menu';
 
 const { Header } = Layout;
 const { Title } = Typography;
 
 const AppHeader: React.FC = () => {
   const headerStyle: React.CSSProperties = {
-    backgroundColor: '#F5F5DC',
+    backgroundColor: 'rgba(255,255,255,0.6)',
     display: 'flex',
     alignItems: 'center',
     paddingLeft: '20px',
+    paddingRight: '20px',
     width: '100%',
     zIndex: 1000,
+    gap: '40px',
   };
 
   return (
@@ -21,11 +24,13 @@ const AppHeader: React.FC = () => {
         style={{ 
           color: '#b5120f', 
           margin: 0,
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          minWidth: '100px',
         }}
       >
         OCBC
       </Title>
+      <AppMenu />
     </Header>
   );
 };

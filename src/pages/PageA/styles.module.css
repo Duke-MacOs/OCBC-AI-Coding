@@ -6,7 +6,7 @@
 
 /* 区域A - 文件上传区域 */
 .uploadArea {
-  width: 80%;
+  width: 90%;
   height: 30vh;
   margin: 0 auto;
   border: 1px solid #000000;
@@ -57,7 +57,7 @@
 
 /* 区域B - 合同列表区域 */
 .contractTableArea {
-  width: 80%;
+  width: 90%;
   margin: 40px auto 0;
   padding: 10px;
   background-color: #ffffff;
